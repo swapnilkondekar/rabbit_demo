@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>String Rabbit Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        #numberButtons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .number-btn {
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            background-color: #f0f0f0;
+            border: 2px solid #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .number-btn.selected {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .number-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #betForm {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        #gameLog {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .user-bet {
+        color: #4CAF50;
+        font-weight: bold;
+    }
+    </style>
+</head>
+<body>
+    <h1>String Rabbit Game</h1>
+    
+    <div id="connectionStatus">Connecting...</div>
+    <div id="gameStatus">Waiting to join game...</div>
+    <div id="waitTimeDisplay"></div>
+    <div id="errorMessage" style="color: red;"></div>
+
+    <div id="numberButtons"></div>
+
+    <form id="betForm">
+        <div class="number-buttons"></div>
+        <input 
+            type="number" 
+            id="betAmount" 
+            placeholder="Enter bet amount (₹10-₹10,000)" 
+            min="10" 
+            max="10000" 
+            required
+        >
+        <button type="submit">Place Bet</button>
+    </form>
+
+    <div id="gameLog"></div>
+
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <script>
+        window.GameState = {
+            userId: null,
+            roomId: null,
+            gameStatus: 'waiting',
+            currentBet: {
+                number: null,
+                amount: null
+            }
+        };
+
+        const socket = io('http://43.205.239.231', {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
+
+        const connectionStatusEl = document.getElementById('connectionStatus');
+        const gameStatusEl = document.getElementById('gameStatus');
+        const waitTimeDisplayEl = document.getElementById('waitTimeDisplay');
+        const errorMessageEl = document.getElementById('errorMessage');
+        const numberButtonsEl = document.getElementById('numberButtons');
+        const gameLogEl = document.getElementById('gameLog');
+        const betForm = document.getElementById('betForm');
+        const betAmountInput = document.getElementById('betAmount');
+
+        let selectedNumber = null;
+        let isBettingOpen = false;
+        let currentRoundId = null;
+
+        // Generate number buttons
+        for (let i = 0; i < 10; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            btn.classList.add('number-btn');
+            btn.addEventListener('click', () => {
+                if (!isBettingOpen) return;
+
+                // Deselect previous button
+                document.querySelectorAll('.number-btn').forEach(b => b.classList.remove('selected'));
+                
+                // Select current button
+                btn.classList.add('selected');
+                selectedNumber = i;
+            });
+            numberButtonsEl.appendChild(btn);
+        }
+
+        socket.on('connect', () => {
+            connectionStatusEl.textContent = 'Connected';
+            
+            // Automatically join a room when connected
+            socket.emit('joinRoom', {
+                userId: generateUserId(),
+                roomId: generateRoomId()
+            });
+        });
+
+        socket.on('disconnect', () => {
+            connectionStatusEl.textContent = 'Disconnected. Reconnecting...';
+        });
+
+        // Bet Form Submission
+        betForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    // Validate betting state
+    if (!isBettingOpen) {
+        alert('Betting is currently closed.');
+        return;
+    }
+
+    // Validate number selection
+    if (selectedNumber === null) {
+        alert('Please select a number to bet on.');
+        return;
+    }
+
+    // Validate bet amount
+    const betAmount = parseInt(betAmountInput.value);
+    if (isNaN(betAmount) || betAmount < 10 || betAmount > 10000) {
+        alert('Bet amount must be between ₹10 and ₹10,000');
+        return;
+    }
+
+    // Prepare bet data
+    const betData = {
+        userId: window.GameState.userId,
+        roomId: window.GameState.roomId,
+        number: selectedNumber,
+        amount: betAmount,
+        roundId: currentRoundId
+    };
+
+    console.log('Placing bet:', betData);
+
+    // Send bet to server
+    socket.emit('placeBet', betData);
+
+    // Immediately show placed bet in game log
+    gameLogEl.innerHTML += `
+        <p class="user-bet">
+            ✅ Your Bet: Number ${selectedNumber}, Amount ₹${betAmount}
+        </p>
+    `;
+
+    // Disable bet form after submission
+    betForm.querySelector('button[type="submit"]').disabled = true;
+    document.querySelectorAll('.number-btn').forEach(btn => {
+        btn.disabled = true;
+        btn.classList.remove('selected');
+    });
+});
+
+        // Socket Event Handlers
+        socket.on('roomJoined', (data) => {
+            // Update global game state
+            window.GameState.userId = data.userId;
+            window.GameState.roomId = data.roomId;
+            window.GameState.gameStatus = data.gameStatus;
+            
+            gameStatusEl.textContent = `Joined Room: ${data.roomId}`;
+        });
+
+        socket.on('roundStarted', (data) => {
+    console.log('New Round Started:', data);
+    
+    // Reset UI
+    selectedNumber = null;
+    currentRoundId = data.roundNumber;  // Store current round ID
+    
+    // Clear previous bet log, but keep overall game log
+    gameLogEl.innerHTML = '';
+
+    // Reset number buttons
+    document.querySelectorAll('.number-btn').forEach(btn => {
+        btn.disabled = true;
+        btn.classList.remove('selected');
+    });
+
+    // Reset bet form
+    betForm.reset();
+    betForm.querySelector('button[type="submit"]').disabled = true;
+
+    // Immediately start betting without waiting
+    setTimeout(() => {
+        socket.emit('startBetting', { 
+            roomId: window.GameState.roomId, 
+            roundNumber: currentRoundId 
+        });
+    }, 1000);  // Small delay to ensure round is set up
+});
+
+socket.on('bettingStarted', (data) => {
+    console.log('Betting Started:', data);
+    
+    // Start betting period countdown
+    let countdown = data.bettingTime || 30;
+    gameStatusEl.textContent = `Betting is now open! (${countdown} seconds remaining)`;
+    
+    // Enable number buttons
+    isBettingOpen = true;
+    document.querySelectorAll('.number-btn').forEach(btn => {
+        btn.disabled = false;
+    });
+
+    // Enable bet form submit button
+    betForm.querySelector('button[type="submit"]').disabled = false;
+    
+    const bettingCountdown = setInterval(() => {
+        countdown--;
+        gameStatusEl.textContent = `Betting is now open! (${countdown} seconds remaining)`;
+        
+        if (countdown <= 0) {
+            clearInterval(bettingCountdown);
+            isBettingOpen = false;
+            gameStatusEl.textContent = 'Betting closed. Waiting for results...';
+            
+            // Disable number buttons and bet form
+            document.querySelectorAll('.number-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.classList.remove('selected');
+            });
+            betForm.querySelector('button[type="submit"]').disabled = true;
+        }
+    }, 1000);
+});
+
+socket.on('betPlaced', (betData) => {
+    console.log('Bet placed successfully:', betData);
+    
+    // Only add to log if it's not the current user's bet
+    if (betData.userId !== window.GameState.userId) {
+        gameLogEl.innerHTML += `
+            <p>✅ Bet Placed: User ${betData.userId}, 
+               Number ${betData.number}, 
+               Amount ₹${betData.amount}
+            </p>
+        `;
+    }
+});
+        socket.on('betError', (errorData) => {
+            console.error('Bet placement error:', errorData);
+            alert(`Bet Error: ${errorData.message}`);
+            
+            // Re-enable bet form
+            betForm.querySelector('button[type="submit"]').disabled = false;
+        });
+
+        socket.on('roundResults', (data) => {
+    console.log('Round Results:', data);
+
+    // Clear previous game log
+    gameLogEl.innerHTML += '';
+
+    // Display round summary
+    gameLogEl.innerHTML += `<h3>Round ${data.roundNumber} Results</h3>`;
+    gameLogEl.innerHTML += `<p>Winning Number: ${data.winningNumber}</p>`;
+
+    // Check if the current user's bet matches the winning number
+    const isWinner = window.GameState.currentBet.number === data.winningNumber;
+    const resultData = {
+        isWinner: isWinner,
+        winnings: isWinner ? window.GameState.currentBet.amount * 10 : 0, // Example winnings calculation
+        amount: window.GameState.currentBet.amount,
+        number: window.GameState.currentBet.number,
+        winningNumber: data.winningNumber
+    };
+
+    // Display result message
+    const resultMessage = isWinner 
+        ? `🎉 You won by betting on ${resultData.number}!`
+        : `❌ You lost  (bet on ${resultData.number})`;
+    gameLogEl.innerHTML += `<p>${resultMessage}</p>`;
+
+    // Send result data to Unity
+    const resultJson = JSON.stringify(resultData);
+    unityInstance.SendMessage('GameManager', 'ReceiveRoundResults', resultJson);
+
+    // Update game status
+    gameStatusEl.textContent = 'Waiting for next round...';
+
+    // Disable betting
+    isBettingOpen = false;
+    document.querySelectorAll('.number-btn').forEach(btn => {
+        btn.disabled = true;
+        btn.classList.remove('selected');
+    });
+});
+
+        // Utility functions
+        function generateUserId() {
+            return 'user_' + Math.random().toString(36).substring(2, 10);
+        }
+
+        function generateRoomId() {
+            return 'room_' + Math.random().toString(36).substring(2, 10);
+        }
+    </script>
+</body>
+</html>
