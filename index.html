@@ -1,8 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-us">
+
 <head>
-    <meta charset="UTF-8">
-    <title>String Rabbit Game</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity WebGL Player | WebGL Game Bot</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const webapp = window.Telegram.WebApp;
+
+                // Telegram Web App Configuration
+                webapp.ready(); // Signal app is ready
+                webapp.expand(); // Expand to full screen
+
+                // Optional: Handle Telegram-specific events
+                webapp.onEvent('themeChanged', () => {
+                    // Adjust your app's theme based on Telegram's theme
+                    const theme = webapp.colorScheme;
+                    document.body.classList.toggle('dark-theme', theme === 'dark');
+                });
+
+                // Optional: Close button handling
+                webapp.onEvent('mainButtonClicked', () => {
+                    webapp.sendData('Game started');
+                });
+            }
+        });
+    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,12 +39,14 @@
             padding: 20px;
             text-align: center;
         }
+
         #numberButtons {
             display: flex;
             justify-content: center;
             gap: 10px;
             margin: 20px 0;
         }
+
         .number-btn {
             width: 50px;
             height: 50px;
@@ -25,21 +55,26 @@
             border: 2px solid #333;
             cursor: pointer;
             transition: all 0.3s ease;
+            color:#000;
         }
+
         .number-btn.selected {
             background-color: #4CAF50;
             color: white;
         }
+
         .number-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+
         #betForm {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 10px;
         }
+
         #gameLog {
             max-height: 200px;
             overflow-y: auto;
@@ -47,35 +82,178 @@
             padding: 10px;
             text-align: left;
         }
+
         .user-bet {
-        color: #4CAF50;
-        font-weight: bold;
-    }
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .form-section,
+        .game-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
     </style>
 </head>
+
 <body>
-    <h1>String Rabbit Game</h1>
-    
-    <div id="connectionStatus">Connecting...</div>
-    <div id="gameStatus">Waiting to join game...</div>
-    <div id="waitTimeDisplay"></div>
-    <div id="errorMessage" style="color: red;"></div>
+    <div class="container">
+        <header>
+            <h1>Welcome to WebGL Game</h1>
+        </header>
+        
+        <main>
+            <div id="connectionStatus">Connecting...</div>
+            <div id="gameStatus">Waiting to join game...</div>
+            <div id="waitTimeDisplay"></div>
+            <div id="errorMessage" style="color: red;"></div>
 
-    <div id="numberButtons"></div>
+            <div class="form-section">
+                <div id="numberButtons"></div>
+                <form id="betForm">
+                    <div class="number-buttons"></div>
+                    <input
+                        type="number"
+                        id="betAmount"
+                        placeholder="Enter bet amount (₹10-₹10,000)"
+                        min="10"
+                        max="10000"
+                        required>
+                    <button type="submit">Place Bet</button>
+                </form>
+            </div>
 
-    <form id="betForm">
-        <div class="number-buttons"></div>
-        <input 
-            type="number" 
-            id="betAmount" 
-            placeholder="Enter bet amount (₹10-₹10,000)" 
-            min="10" 
-            max="10000" 
-            required
-        >
-        <button type="submit">Place Bet</button>
-    </form>
+            <div class="game-section">
+                <div id="unity-container" class="unity-desktop">
+                    <canvas id="unity-canvas" width=960 height=600></canvas>
+                    <div id="unity-loading-bar">
+                        <div id="unity-logo"></div>
+                        <div id="unity-progress-bar-empty">
+                            <div id="unity-progress-bar-full"></div>
+                        </div>
+                    </div>
+                    <div id="unity-warning" style="display: none;"> </div>
+                </div>
+            </div>
+        </main>
 
+        <div id="gameLog"></div>
+    </div>
+
+    <footer>
+        <nav>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#profile">Profile</a></li>
+            </ul>
+        </nav>
+        <p>&copy; 2025 WebGL Game Bot. All rights reserved.</p>
+    </footer>
+    <script>
+        var unityInstance;
+        var container = document.querySelector("#unity-container");
+        var canvas = document.querySelector("#unity-canvas");
+        var loadingBar = document.querySelector("#unity-loading-bar");
+        var progressBarFull = document.querySelector("#unity-progress-bar-full");
+
+        var warningBanner = document.querySelector("#unity-warning");
+
+        // Shows a temporary message banner/ribbon for a few seconds, or
+        // a permanent error message on top of the canvas if type=='error'.
+        // If type=='warning', a yellow highlight color is used.
+        // Modify or remove this function to customize the visually presented
+        // way that non-critical warnings and error messages are presented to the
+        // user.
+        function unityShowBanner(msg, type) {
+            function updateBannerVisibility() {
+                //warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+            }
+            var div = document.createElement('div');
+            div.innerHTML = msg;
+            warningBanner.appendChild(div);
+            if (type == 'error') div.style = 'background: red; padding: 10px;';
+            else {
+                if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+                setTimeout(function() {
+                    warningBanner.removeChild(div);
+                    updateBannerVisibility();
+                }, 5000);
+            }
+            updateBannerVisibility();
+        }
+
+        var buildUrl = "Build";
+        var loaderUrl = buildUrl + "/Rabbit_Roulate_Build.loader.js";
+        var config = {
+            dataUrl: buildUrl + "/Rabbit_Roulate_Build.data",
+            frameworkUrl: buildUrl + "/Rabbit_Roulate_Build.framework.js",
+            codeUrl: buildUrl + "/Rabbit_Roulate_Build.wasm",
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "DefaultCompany",
+            productName: "WebGL Game Bot",
+            productVersion: "1.0",
+            showBanner: unityShowBanner,
+        };
+
+        // By default Unity keeps WebGL canvas render target size matched with
+        // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+        // Set this to false if you want to decouple this synchronization from
+        // happening inside the engine, and you would instead like to size up
+        // the canvas DOM size and WebGL render target sizes yourself.
+        // config.matchWebGLToCanvasSize = false;
+
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            // Mobile device style: fill the whole browser client area with the game canvas:
+
+            var meta = document.createElement('meta');
+            meta.name = 'viewport';
+            meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+            document.getElementsByTagName('head')[0].appendChild(meta);
+            container.className = "unity-mobile";
+            canvas.className = "unity-mobile";
+
+            // To lower canvas resolution on mobile devices to gain some
+            // performance, uncomment the following line:
+            // config.devicePixelRatio = 1;
+
+            unityShowBanner('WebGL builds are not supported on mobile devices.');
+        } else {
+            // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+
+            canvas.style.width = "960px";
+            canvas.style.height = "600px";
+        }
+
+        loadingBar.style.display = "block";
+
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+            createUnityInstance(canvas, config, (progress) => {
+                progressBarFull.style.width = 100 * progress + "%";
+            }).then((unityInstance2) => {
+                loadingBar.style.display = "none";
+                unityInstance = unityInstance2;
+            }).catch((message) => {
+                alert(message);
+            });
+        };
+        document.body.appendChild(script);
+    </script>
     <div id="gameLog"></div>
 
     <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
@@ -120,7 +298,7 @@
 
                 // Deselect previous button
                 document.querySelectorAll('.number-btn').forEach(b => b.classList.remove('selected'));
-                
+
                 // Select current button
                 btn.classList.add('selected');
                 selectedNumber = i;
@@ -130,7 +308,7 @@
 
         socket.on('connect', () => {
             connectionStatusEl.textContent = 'Connected';
-            
+
             // Automatically join a room when connected
             socket.emit('joinRoom', {
                 userId: generateUserId(),
@@ -144,55 +322,55 @@
 
         // Bet Form Submission
         betForm.addEventListener('submit', (e) => {
-    e.preventDefault();
+            e.preventDefault();
 
-    // Validate betting state
-    if (!isBettingOpen) {
-        alert('Betting is currently closed.');
-        return;
-    }
+            // Validate betting state
+            if (!isBettingOpen) {
+                alert('Betting is currently closed.');
+                return;
+            }
 
-    // Validate number selection
-    if (selectedNumber === null) {
-        alert('Please select a number to bet on.');
-        return;
-    }
+            // Validate number selection
+            if (selectedNumber === null) {
+                alert('Please select a number to bet on.');
+                return;
+            }
 
-    // Validate bet amount
-    const betAmount = parseInt(betAmountInput.value);
-    if (isNaN(betAmount) || betAmount < 10 || betAmount > 10000) {
-        alert('Bet amount must be between ₹10 and ₹10,000');
-        return;
-    }
+            // Validate bet amount
+            const betAmount = parseInt(betAmountInput.value);
+            if (isNaN(betAmount) || betAmount < 10 || betAmount > 10000) {
+                alert('Bet amount must be between ₹10 and ₹10,000');
+                return;
+            }
 
-    // Prepare bet data
-    const betData = {
-        userId: window.GameState.userId,
-        roomId: window.GameState.roomId,
-        number: selectedNumber,
-        amount: betAmount,
-        roundId: currentRoundId
-    };
+            // Prepare bet data
+            const betData = {
+                userId: window.GameState.userId,
+                roomId: window.GameState.roomId,
+                number: selectedNumber,
+                amount: betAmount,
+                roundId: currentRoundId
+            };
 
-    console.log('Placing bet:', betData);
+            console.log('Placing bet:', betData);
 
-    // Send bet to server
-    socket.emit('placeBet', betData);
+            // Send bet to server
+            socket.emit('placeBet', betData);
 
-    // Immediately show placed bet in game log
-    gameLogEl.innerHTML += `
+            // Immediately show placed bet in game log
+            gameLogEl.innerHTML += `
         <p class="user-bet">
             ✅ Your Bet: Number ${selectedNumber}, Amount ₹${betAmount}
         </p>
     `;
 
-    // Disable bet form after submission
-    betForm.querySelector('button[type="submit"]').disabled = true;
-    document.querySelectorAll('.number-btn').forEach(btn => {
-        btn.disabled = true;
-        btn.classList.remove('selected');
-    });
-});
+            // Disable bet form after submission
+            betForm.querySelector('button[type="submit"]').disabled = true;
+            document.querySelectorAll('.number-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.classList.remove('selected');
+            });
+        });
 
         // Socket Event Handlers
         socket.on('roomJoined', (data) => {
@@ -200,135 +378,137 @@
             window.GameState.userId = data.userId;
             window.GameState.roomId = data.roomId;
             window.GameState.gameStatus = data.gameStatus;
-            
+
             gameStatusEl.textContent = `Joined Room: ${data.roomId}`;
         });
 
         socket.on('roundStarted', (data) => {
-    console.log('New Round Started:', data);
-    
-    // Reset UI
-    selectedNumber = null;
-    currentRoundId = data.roundNumber;  // Store current round ID
-    
-    // Clear previous bet log, but keep overall game log
-    gameLogEl.innerHTML = '';
+            console.log('New Round Started:', data);
 
-    // Reset number buttons
-    document.querySelectorAll('.number-btn').forEach(btn => {
-        btn.disabled = true;
-        btn.classList.remove('selected');
-    });
+            // Reset UI
+            selectedNumber = null;
+            currentRoundId = data.roundNumber; // Store current round ID
 
-    // Reset bet form
-    betForm.reset();
-    betForm.querySelector('button[type="submit"]').disabled = true;
+            // Clear previous bet log, but keep overall game log
+            gameLogEl.innerHTML = '';
 
-    // Immediately start betting without waiting
-    setTimeout(() => {
-        socket.emit('startBetting', { 
-            roomId: window.GameState.roomId, 
-            roundNumber: currentRoundId 
-        });
-    }, 1000);  // Small delay to ensure round is set up
-});
-
-socket.on('bettingStarted', (data) => {
-    console.log('Betting Started:', data);
-    
-    // Start betting period countdown
-    let countdown = data.bettingTime || 30;
-    gameStatusEl.textContent = `Betting is now open! (${countdown} seconds remaining)`;
-    
-    // Enable number buttons
-    isBettingOpen = true;
-    document.querySelectorAll('.number-btn').forEach(btn => {
-        btn.disabled = false;
-    });
-
-    // Enable bet form submit button
-    betForm.querySelector('button[type="submit"]').disabled = false;
-    
-    const bettingCountdown = setInterval(() => {
-        countdown--;
-        gameStatusEl.textContent = `Betting is now open! (${countdown} seconds remaining)`;
-        
-        if (countdown <= 0) {
-            clearInterval(bettingCountdown);
-            isBettingOpen = false;
-            gameStatusEl.textContent = 'Betting closed. Waiting for results...';
-            
-            // Disable number buttons and bet form
+            // Reset number buttons
             document.querySelectorAll('.number-btn').forEach(btn => {
                 btn.disabled = true;
                 btn.classList.remove('selected');
             });
-            betForm.querySelector('button[type="submit"]').disabled = true;
-        }
-    }, 1000);
-});
 
-socket.on('betPlaced', (betData) => {
-    console.log('Bet placed successfully:', betData);
-    
-    // Only add to log if it's not the current user's bet
-    if (betData.userId !== window.GameState.userId) {
-        gameLogEl.innerHTML += `
+            // Reset bet form
+            betForm.reset();
+            betForm.querySelector('button[type="submit"]').disabled = true;
+
+            // Immediately start betting without waiting
+            setTimeout(() => {
+                socket.emit('startBetting', {
+                    roomId: window.GameState.roomId,
+                    roundNumber: currentRoundId
+                });
+            }, 1000); // Small delay to ensure round is set up
+        });
+
+        socket.on('bettingStarted', (data) => {
+            console.log('Betting Started:', data);
+
+            // Start betting period countdown
+            let countdown = data.bettingTime || 30;
+            gameStatusEl.textContent = `Betting is now open! (${countdown} seconds remaining)`;
+
+            // Enable number buttons
+            isBettingOpen = true;
+            document.querySelectorAll('.number-btn').forEach(btn => {
+                btn.disabled = false;
+            });
+
+            // Enable bet form submit button
+            betForm.querySelector('button[type="submit"]').disabled = false;
+
+            const bettingCountdown = setInterval(() => {
+                countdown--;
+                gameStatusEl.textContent = `Betting is now open! (${countdown} seconds remaining)`;
+
+                if (countdown <= 0) {
+                    clearInterval(bettingCountdown);
+                    isBettingOpen = false;
+                    gameStatusEl.textContent = 'Betting closed. Waiting for results...';
+
+                    // Disable number buttons and bet form
+                    document.querySelectorAll('.number-btn').forEach(btn => {
+                        btn.disabled = true;
+                        btn.classList.remove('selected');
+                    });
+                    betForm.querySelector('button[type="submit"]').disabled = true;
+                }
+            }, 1000);
+
+            unityInstance.SendMessage('GameManager', 'ResetAnimationState');
+        });
+
+        socket.on('betPlaced', (betData) => {
+            console.log('Bet placed successfully:', betData);
+
+            // Only add to log if it's not the current user's bet
+            if (betData.userId !== window.GameState.userId) {
+                gameLogEl.innerHTML += `
             <p>✅ Bet Placed: User ${betData.userId}, 
                Number ${betData.number}, 
                Amount ₹${betData.amount}
             </p>
         `;
-    }
-});
+            }
+        });
         socket.on('betError', (errorData) => {
             console.error('Bet placement error:', errorData);
             alert(`Bet Error: ${errorData.message}`);
-            
+
             // Re-enable bet form
             betForm.querySelector('button[type="submit"]').disabled = false;
         });
 
         socket.on('roundResults', (data) => {
-    console.log('Round Results:', data);
+            console.log('Round Results:', data);
 
-    // Clear previous game log
-    gameLogEl.innerHTML += '';
+            // Clear previous game log
+            gameLogEl.innerHTML += '';
 
-    // Display round summary
-    gameLogEl.innerHTML += `<h3>Round ${data.roundNumber} Results</h3>`;
-    gameLogEl.innerHTML += `<p>Winning Number: ${data.winningNumber}</p>`;
+            // Display round summary
+            gameLogEl.innerHTML += `<h3>Round ${data.roundNumber} Results</h3>`;
+            gameLogEl.innerHTML += `<p>Winning Number: ${data.winningNumber}</p>`;
 
-    // Check if the current user's bet matches the winning number
-    const isWinner = window.GameState.currentBet.number === data.winningNumber;
-    const resultData = {
-        isWinner: isWinner,
-        winnings: isWinner ? window.GameState.currentBet.amount * 10 : 0, // Example winnings calculation
-        amount: window.GameState.currentBet.amount,
-        number: window.GameState.currentBet.number,
-        winningNumber: data.winningNumber
-    };
+            // Check if the current user's bet matches the winning number
+            const isWinner = window.GameState.currentBet.number === data.winningNumber;
+            const resultData = {
+                isWinner: isWinner,
+                winnings: isWinner ? window.GameState.currentBet.amount * 10 : 0, // Example winnings calculation
+                amount: window.GameState.currentBet.amount,
+                number: window.GameState.currentBet.number,
+                winningNumber: data.winningNumber
+            };
 
-    // Display result message
-    const resultMessage = isWinner 
-        ? `🎉 You won by betting on ${resultData.number}!`
-        : `❌ You lost  (bet on ${resultData.number})`;
-    gameLogEl.innerHTML += `<p>${resultMessage}</p>`;
+            // Display result message
+            const resultMessage = isWinner ?
+                `🎉 You won by betting on ${resultData.number}!` :
+                `❌ You lost  (bet on ${resultData.number})`;
+            gameLogEl.innerHTML += `<p>${resultMessage}</p>`;
 
-    // Send result data to Unity
-    const resultJson = JSON.stringify(resultData);
-    unityInstance.SendMessage('GameManager', 'ReceiveRoundResults', resultJson);
+            // Send result data to Unity
+            const resultJson = JSON.stringify(resultData);
+            unityInstance.SendMessage('GameManager', 'ReceiveRoundResults', resultJson);
 
-    // Update game status
-    gameStatusEl.textContent = 'Waiting for next round...';
+            // Update game status
+            gameStatusEl.textContent = 'Waiting for next round...';
 
-    // Disable betting
-    isBettingOpen = false;
-    document.querySelectorAll('.number-btn').forEach(btn => {
-        btn.disabled = true;
-        btn.classList.remove('selected');
-    });
-});
+            // Disable betting
+            isBettingOpen = false;
+            document.querySelectorAll('.number-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.classList.remove('selected');
+            });
+        });
 
         // Utility functions
         function generateUserId() {
@@ -340,4 +520,5 @@ socket.on('betPlaced', (betData) => {
         }
     </script>
 </body>
+
 </html>
