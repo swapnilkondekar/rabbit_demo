@@ -386,6 +386,15 @@
         socket.on('roundStarted', (data) => {
             console.log('New Round Started:', data);
 
+            // New Round Start -- Waiting Time 40 (Room Id, Room number , waiting time) --- Done
+            var resultData = {
+                roomId:data.roomId,
+                roundNumber:data.roundNumber,
+                waitingTime:data.waitingTime
+            };
+            const resultJson = JSON.stringify(resultData);
+            unityInstance.SendMessage('GameManager', 'NewRoundStarted',resultJson);
+           
             // Reset UI
             selectedNumber = null;
             currentRoundId = data.roundNumber; // Store current round ID
@@ -415,6 +424,13 @@
         socket.on('bettingStarted', (data) => {
             console.log('Betting Started:', data);
 
+           
+            var resultData = {
+                userId:window.GameState.userId,
+                roundNumber:data.roundNumber
+            };
+            const resultJson = JSON.stringify(resultData);
+            unityInstance.SendMessage('GameManager', 'BettingStarted',resultJson);
             // Start betting period countdown
             let countdown = data.bettingTime || 30;
             gameStatusEl.textContent = `Betting is now open! (${countdown} seconds remaining)`;
@@ -424,6 +440,7 @@
             document.querySelectorAll('.number-btn').forEach(btn => {
                 btn.disabled = false;
             });
+            
 
             // Enable bet form submit button
             betForm.querySelector('button[type="submit"]').disabled = false;
@@ -452,6 +469,15 @@
         socket.on('betPlaced', (betData) => {
             console.log('Bet placed successfully:', betData);
 
+           
+            var resultData = {
+                userId:window.GameState.userId,
+                roundNumber:data.roundNumber,
+                roundId:data.roundId
+            };
+            const resultJson = JSON.stringify(resultData);
+            unityInstance.SendMessage('GameManager', 'BetPlaced',resultJson);
+            
             // Only add to log if it's not the current user's bet
             if (betData.userId !== window.GameState.userId) {
                 gameLogEl.innerHTML += `
@@ -482,13 +508,18 @@
 
             // Check if the current user's bet matches the winning number
             const isWinner = window.GameState.currentBet.number === data.winningNumber;
+                        
             const resultData = {
+                userId: window.GameState.userId,
+                roomId: data.roomId,
+                roundNumber:data.roundNumber,
                 isWinner: isWinner,
                 winnings: isWinner ? window.GameState.currentBet.amount * 10 : 0, // Example winnings calculation
                 amount: window.GameState.currentBet.amount,
                 number: window.GameState.currentBet.number,
                 winningNumber: data.winningNumber
             };
+
 
             // Display result message
             const resultMessage = isWinner ?
@@ -499,6 +530,7 @@
             // Send result data to Unity
             const resultJson = JSON.stringify(resultData);
             unityInstance.SendMessage('GameManager', 'ReceiveRoundResults', resultJson);
+
 
             // Update game status
             gameStatusEl.textContent = 'Waiting for next round...';
