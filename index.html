@@ -352,8 +352,11 @@
         roomId: window.GameState.roomId,
         number: selectedNumber,
         amount: betAmount,
-        roundId: currentRoundId
+        roundNumber: currentRoundId,
     };
+
+    const resultJson = JSON.stringify(betData);
+    unityInstance.SendMessage('GameManager', 'BetPlaced', resultJson);
 
     console.log('Placing bet:', betData);
 
@@ -392,6 +395,9 @@
     selectedNumber = null;
     currentRoundId = data.roundNumber;  // Store current round ID
     
+    const resultJson = JSON.stringify(data);
+    unityInstance.SendMessage('GameManager', 'NewRoundStarted', resultJson);
+
     // Clear previous bet log, but keep overall game log
     gameLogEl.innerHTML = '';
 
@@ -421,6 +427,9 @@ socket.on('bettingStarted', (data) => {
     let countdown = data.bettingTime || 30;
     gameStatusEl.textContent = `Betting is now open! (${countdown} seconds remaining)`;
     
+    const resultJson = JSON.stringify(data);
+    unityInstance.SendMessage('GameManager', 'BettingStarted', resultJson);
+
     // Enable number buttons
     isBettingOpen = true;
     document.querySelectorAll('.number-btn').forEach(btn => {
@@ -489,8 +498,12 @@ socket.on('betPlaced', (betData) => {
         winnings: isWinner ? window.GameState.currentBet.amount * 10 : 0, // Example winnings calculation
         amount: window.GameState.currentBet.amount,
         number: window.GameState.currentBet.number,
-        winningNumber: data.winningNumber
+        winningNumber: data.winningNumber,
+        userId: window.GameState.userId,
+        roomId: window.GameState.roomId,
+        roundNumber: data.roundNumber
     };
+
     console.log(resultData);
 
     // Display result message
