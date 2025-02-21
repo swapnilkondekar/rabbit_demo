@@ -344,6 +344,8 @@
         return;
     }
 
+    window.GameState.currentBet.number = selectedNumber;
+    window.GameState.currentBet.amount = betAmount;
     // Prepare bet data
     const betData = {
         userId: window.GameState.userId,
