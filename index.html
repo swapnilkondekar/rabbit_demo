@@ -30,8 +30,10 @@
                     webapp.sendData('Game started');
                 });
             }
+            
         });
         function setBetAmount(value){
+            console.log(value);
             document.getElementById('betAmount').value = value;
         }
     </script>
@@ -147,7 +149,6 @@
                 <form id="betForm">
                     <div class="number-buttons"></div>
                     <input
-                    onkeyup="setBetAmount(this.value)"
                         type="number"
                         id="betAmount"
                         placeholder="Enter bet amount (₹10-₹10,000)"
@@ -292,7 +293,10 @@
                 unityInstance = unityInstance2;
                 document.getElementById('overlay').style.display = 'none';
                 console.log("Unity Instance created!", unityInstance2);
-
+                const betAmountInput = document.getElementById('betAmount');
+                betAmountInput.addEventListener('keyup', (event) => {
+                    setBetAmount(event.target.value);
+                });
             }).catch((message) => {
                 alert(message);
             });
