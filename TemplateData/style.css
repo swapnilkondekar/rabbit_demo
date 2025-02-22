@@ -40,7 +40,7 @@ body {
   flex-wrap: wrap;
 }
 
-.number-btn {
+/* .number-btn {
   width: 50px;
   height: 50px;
   margin: 5px;
@@ -54,37 +54,37 @@ body {
 
 .number-btn:hover {
   background-color: #45a049;
-}
+} */
 
-#betForm {
+/* #betForm {
   width: 100%;
   max-width: 400px;
   background-color: white;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
+} */
 
-#betForm input, 
+/* #betForm input, 
 #betForm button {
   width: 100%;
   padding: 10px;
   margin: 10px 0;
   border: 1px solid #ddd;
   border-radius: 5px;
-}
+} */
 
-#betForm button {
+/* #betForm button {
   background-color: #007bff;
   color: white;
   border: none;
   cursor: pointer;
   transition: background-color 0.3s;
-}
+} */
 
-#betForm button:hover {
+/* #betForm button:hover {
   background-color: #0056b3;
-}
+} */
 
 #unityContainer {
   width: 100%;
@@ -116,7 +116,7 @@ body {
 #gameLog {
   margin-top: 20px;
   padding: 10px;
-  background-color: white;
+  background-color: transparent;
   border-radius: 5px;
   max-height: 200px;
   overflow-y: auto;
