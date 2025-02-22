@@ -31,6 +31,9 @@
                 });
             }
         });
+        function setBetAmount(value){
+            document.getElementById('betAmount').value = value;
+        }
     </script>
     <style>
         body {
@@ -144,6 +147,7 @@
                 <form id="betForm">
                     <div class="number-buttons"></div>
                     <input
+                    onkeyup="setBetAmount(this.value)"
                         type="number"
                         id="betAmount"
                         placeholder="Enter bet amount (₹10-₹10,000)"
@@ -326,6 +330,7 @@
         const betForm = document.getElementById('betForm');
         const betAmountInput = document.getElementById('betAmount');
 
+        
         let selectedNumber = null;
         let isBettingOpen = false;
         let currentRoundId = null;
