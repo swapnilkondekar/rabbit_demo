@@ -295,7 +295,9 @@
                 console.log("Unity Instance created!", unityInstance2);
                 const betAmountInput = document.getElementById('betAmount');
                 betAmountInput.addEventListener('keyup', (event) => {
-                    setBetAmount(event.target.value);
+                    if(event.key>=0){
+                    setBetAmount(betAmountInput.value.toString()+event.key);
+                    }
                 });
             }).catch((message) => {
                 alert(message);
