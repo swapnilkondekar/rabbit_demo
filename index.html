@@ -108,6 +108,22 @@
             align-items: center;
             gap: 15px;
         }
+        .overlay{
+            display: block;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top:0;
+            left:0;
+            background: #0000007a;
+        }
+        .overlay .overlay-body{
+            background: #ffffffab;
+            position: relative;
+            width: 60%;
+            margin:0px auto;
+            top:30%;
+        }
     </style>
 </head>
 
@@ -154,7 +170,12 @@
 
         <div id="gameLog"></div>
     </div>
-
+    <div class='overlay' id="overlay">
+        <div class='overlay-body'>
+            <h1>Please wait...</h1>
+            <p>Game is loading...</p>
+        </div>
+    </div>
     <footer>
         <nav>
             <ul>
@@ -265,6 +286,7 @@
             }).then((unityInstance2) => {
                 loadingBar.style.display = "none";
                 unityInstance = unityInstance2;
+                document.getElementById('overlay').style.display = 'none';
                 console.log("Unity Instance created!", unityInstance2);
 
             }).catch((message) => {
