@@ -1,0 +1,20 @@
+
+@font-face {
+  font-family: 'MADETommySoftMedium';
+  src: url('../fonts/MADETommySoftMedium.eot');
+  src: url('../fonts/MADETommySoftMedium.eot') format('embedded-opentype'),
+       url('../fonts/MADETommySoftMedium.woff2') format('woff2'),
+       url('../fonts/MADETommySoftMedium.woff') format('woff'),
+       url('../fonts/MADETommySoftMedium.ttf') format('truetype'),
+       url('../fonts/MADETommySoftMedium.svg#MADETommySoftMediumPERSONALUSE') format('svg');
+}
+
+@font-face {
+  font-family: 'MADETommySoftRegular';
+  src: url('../fonts/MADETommySoftRegular.eot');
+  src: url('../fonts/MADETommySoftRegular.eot') format('embedded-opentype'),
+       url('../fonts/MADETommySoftRegular.woff2') format('woff2'),
+       url('../fonts/MADETommySoftRegular.woff') format('woff'),
+       url('../fonts/MADETommySoftRegular.ttf') format('truetype'),
+       url('../fonts/MADETommySoftRegular.svg#MADETommySoftRegularPERSONALUSE') format('svg');
+}
