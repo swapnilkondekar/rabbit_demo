@@ -166,6 +166,12 @@
                 </div>
             </div>
         </div>
+        <div class="wonlosewrap" style="display:none" >
+            <div class="wonlosewrapfix">
+                <div class="wonwrap"> <img src="img/youwonimg.png" alt=""> </div>
+                <div class="won loose wonlosebg robotofont"> 1562.50 </div>
+            </div>
+        </div>
     </div> <!-- End of Main Content -->
     <!-- Bootstrap core JavaScript-->
     <script src="js/jquery.js"></script>
@@ -557,6 +563,30 @@ socket.on('betPlaced', (betData) => {
 
     // Check if the current user's bet matches the winning number
     const isWinner = window.GameState.currentBet.number === data.winningNumber;
+    if(window.GameState.currentBet.amount>0){
+    jQuery(".wonlosewrap").show();
+
+    if(isWinner){
+        jQuery(".wonlosewrap").find("img").attr("src","img/youwonimg.png");
+        jQuery(".wonlosewrap").find(".won").removeClass("loose");
+        jQuery(".wonlosewrap").find(".won").html(window.GameState.currentBet.amount * 10);
+        /*
+        img/youwonimg.png
+        */
+    }
+    else{
+        jQuery(".wonlosewrap").find("img").attr("src","img/youloseimg.png");
+        jQuery(".wonlosewrap").find(".won").addClass("loose");
+        jQuery(".wonlosewrap").find(".won").html(window.GameState.currentBet.amount);
+        /*
+        <div class="wonwrap"> <img src="img/youloseimg.png" alt=""> </div>
+                <div class="won loose wonlosebg robotofont"> 0.00 </div>
+        */
+    }
+    setTimeout(function(){
+        jQuery(".wonlosewrap").hide();
+    },2000);
+}
     const resultData = {
         isWinner: isWinner,
         winnings: isWinner ? window.GameState.currentBet.amount * 10 : 0, // Example winnings calculation
